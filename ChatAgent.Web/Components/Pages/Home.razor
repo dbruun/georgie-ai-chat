@@ -1,0 +1,170 @@
+@page "/"
+@rendermode InteractiveServer
+@inject AgentService AgentService
+@using Microsoft.Agents.AI
+
+<PageTitle>GEORGIE - AI Chat Assistant</PageTitle>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <h1>🤖 GEORGIE</h1>
+        <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Your AI Assistant</p>
+        @if (!string.IsNullOrEmpty(statusMessage))
+        {
+            <div class="status-message @statusClass">@statusMessage</div>
+        }
+    </div>
+
+    <div class="messages-container" @ref="messagesContainer">
+        @foreach (var msg in messages)
+        {
+            <div class="message @msg.Role">
+                <div class="message-icon">
+                    @if (msg.Role == "user")
+                    {
+                        <span>👤</span>
+                    }
+                    else
+                    {
+                        <span>🤖</span>
+                    }
+                </div>
+                <div class="message-content">
+                    <div class="message-text">@msg.Content</div>
+                    <div class="message-time">@msg.Timestamp.ToString("HH:mm")</div>
+                </div>
+            </div>
+        }
+        
+        @if (isStreaming)
+        {
+            <div class="message assistant">
+                <div class="message-icon">
+                    <span>🤖</span>
+                </div>
+                <div class="message-content">
+                    <div class="message-text">@currentStreamingMessage</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="input-container">
+        <textarea 
+            @bind="userInput" 
+            @bind:event="oninput"
+            @onkeydown="HandleKeyDown"
+            placeholder="Type your message here..."
+            rows="3"
+            disabled="@isStreaming"></textarea>
+        <button @onclick="SendMessage" disabled="@(isStreaming || string.IsNullOrWhiteSpace(userInput))">
+            @if (isStreaming)
+            {
+                <span>⏳</span>
+            }
+            else
+            {
+                <span>Send 📤</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    private ElementReference messagesContainer;
+    private List<ChatMessage> messages = new();
+    private string userInput = "";
+    private string currentStreamingMessage = "";
+    private bool isStreaming = false;
+    private string statusMessage = "";
+    private string statusClass = "";
+    
+    private AIAgent? agent;
+    private AgentThread? thread;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            agent = AgentService.CreateAgent();
+            thread = agent.GetNewThread();
+            
+            var hasSearch = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_SEARCH_ENDPOINT"));
+            statusMessage = hasSearch 
+                ? "✓ Connected with Azure AI Search knowledge base" 
+                : "✓ Connected (no knowledge base configured)";
+            statusClass = "success";
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"✗ Error: {ex.Message}";
+            statusClass = "error";
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(userInput) || isStreaming || agent == null || thread == null)
+            return;
+
+        var message = userInput.Trim();
+        userInput = "";
+        
+        messages.Add(new ChatMessage
+        {
+            Role = "user",
+            Content = message,
+            Timestamp = DateTime.Now
+        });
+
+        isStreaming = true;
+        currentStreamingMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            await foreach (var chunk in AgentService.StreamChatResponseAsync(message, thread, agent))
+            {
+                currentStreamingMessage += chunk;
+                StateHasChanged();
+            }
+
+            messages.Add(new ChatMessage
+            {
+                Role = "assistant",
+                Content = currentStreamingMessage,
+                Timestamp = DateTime.Now
+            });
+        }
+        catch (Exception ex)
+        {
+            messages.Add(new ChatMessage
+            {
+                Role = "assistant",
+                Content = $"Error: {ex.Message}",
+                Timestamp = DateTime.Now
+            });
+        }
+        finally
+        {
+            isStreaming = false;
+            currentStreamingMessage = "";
+            StateHasChanged();
+        }
+    }
+
+    private class ChatMessage
+    {
+        public string Role { get; set; } = "";
+        public string Content { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+    }
+}
