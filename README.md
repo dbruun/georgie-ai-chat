@@ -1,426 +1,283 @@
-# Chat Agent - Multi-Turn Conversation
+# GEORGIE - AI Chat Assistant
 
-A console-based chat application built with the [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/overview/agent-framework-overview) that demonstrates multi-turn conversations with an LLM.
+A modern AI chat web application built with Blazor Server and Microsoft Agent Framework, featuring Azure AI Foundry and Azure AI Search RAG integration.
 
-## Features
+## 🤖 Features
 
-- 🤖 Multi-turn conversations with context persistence
-- 💬 Interactive chat interface with colored output
-- 🛠️ Function calling support (example: weather tool)
-- 📡 Streaming responses for real-time feedback
-- 🔄 Conversation thread management
+- **GEORGIE AI Assistant** - Conversational AI with personality
+- **Real-time Chat Interface** - Beautiful, responsive Blazor UI with streaming responses
+- **Azure AI Foundry Support** - Works with Azure OpenAI deployments
+- **Azure AI Search RAG** - Knowledge base integration for grounded responses
+- **OpenAI Compatible** - Also works with standard OpenAI API
+- **Azure Container Apps Ready** - Optimized for cloud deployment
+- **Function Calling** - Extensible tool integration
 
-## Prerequisites
+## 🚀 Quick Start
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
-- An API key from one of the supported providers:
-  - OpenAI
-  - Azure OpenAI
-  - GitHub Models (free tier available)
+### Prerequisites
 
-## Installation
+- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- Azure AI Foundry endpoint OR OpenAI API key
+- (Optional) Azure AI Search for knowledge base
 
-1. Clone or navigate to this repository:
-   ```powershell
-   cd "c:\Repos\Agent Framework Georgie"
+### Run Locally
+
+1. **Configure settings** in `ChatAgent.Web/appsettings.Development.json`:
+   ```json
+   {
+     "AZURE_OPENAI_ENDPOINT": "https://your-resource.openai.azure.com/",
+     "AZURE_OPENAI_KEY": "your-key",
+     "AZURE_OPENAI_DEPLOYMENT": "gpt-4o-mini",
+     "AZURE_SEARCH_ENDPOINT": "https://your-search.search.windows.net",
+     "AZURE_SEARCH_KEY": "your-search-key",
+     "AZURE_SEARCH_INDEX": "your-index-name"
+   }
    ```
 
-2. Restore the NuGet packages (if not already done):
+2. **Run the application**:
    ```powershell
-   dotnet restore
+   cd ChatAgent.Web
+   dotnet run
    ```
 
-## Configuration
+3. **Open browser**: Navigate to `http://localhost:5000`
 
-### Option 1: OpenAI
-
-Set your OpenAI API key as an environment variable:
-
-**Windows (PowerShell):**
-```powershell
-$env:OPENAI_API_KEY='your-api-key-here'
-```
-
-**Linux/Mac:**
-```bash
-export OPENAI_API_KEY='your-api-key-here'
-```
-
-### Option 2: Azure OpenAI
+## 📁 Project Structure
 
 To use Azure OpenAI instead, modify the `Program.cs` file to use `AzureOpenAIClient`:
 
 ```csharp
-// Replace the OpenAIClient initialization with:
-using Microsoft.Agents.AI.AzureOpenAI;
 
-AIAgent agent = new AzureOpenAIClient(
-    new Uri(Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT")!),
-    new AzureKeyCredential(Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY")!)
-)
-.CreateAIAgent(
-    AgentInstructions,
-    AgentName,
-    tools: [AIFunctionFactory.Create(GetWeather)],
-    new AzureOpenAIChatCompletionOptions
-    {
-        DeploymentName = "your-deployment-name"
-    }
-);
-```
-
-Then set the environment variables:
-```powershell
-$env:AZURE_OPENAI_ENDPOINT='https://your-resource.openai.azure.com/'
-$env:AZURE_OPENAI_API_KEY='your-azure-openai-key'
-```
-
-### Option 3: GitHub Models (Free Tier)
-
-GitHub Models offers free access to various AI models. Modify the initialization to:
-
-```csharp
-AIAgent agent = new OpenAIClient(
-    Environment.GetEnvironmentVariable("GITHUB_TOKEN")!,
-    new OpenAIClientOptions { Endpoint = new Uri("https://models.inference.ai.azure.com") }
-)
-.CreateAIAgent(
-    AgentInstructions,
-    AgentName,
-    tools: [AIFunctionFactory.Create(GetWeather)],
-    new OpenAIChatCompletionOptions
-    {
-        ModelId = "gpt-4o-mini"
-    }
-);
-```
-
-Then set your GitHub token:
-```powershell
-$env:GITHUB_TOKEN='your-github-token'
-```
-
-## Running the Application
-
-Build and run the application:
-
-```powershell
-dotnet run
-```
-
-You'll see a chat interface where you can interact with the agent:
 
 ```
-╔═══════════════════════════════════════════════╗
-║     Chat Agent - Multi-Turn Conversation     ║
-╚═══════════════════════════════════════════════╝
-
-Chat with Georgie! (Type 'exit' or 'quit' to end the conversation)
-────────────────────────────────────────────────────────────
-
-You: Hello!
-Georgie: Hello! How can I assist you today?
-
-You: What's the weather like in Seattle?
-Georgie: The weather in Seattle is rainy with a high of 18°C.
-
-You: exit
-Georgie: Goodbye! Have a great day!
+georgie-ai-chat/
+├── ChatAgent.Web/              # Blazor web application
+│   ├── Components/
+│   │   ├── Pages/             
+│   │   │   └── Home.razor     # Main chat interface
+│   │   └── Layout/            # App layout components
+│   ├── Services/
+│   │   └── AgentService.cs    # AI agent management
+│   ├── wwwroot/
+│   │   └── app.css            # GEORGIE styling
+│   ├── appsettings.json       # Base configuration
+│   └── appsettings.Development.json  # Local secrets (gitignored)
+├── Dockerfile                 # Container image definition
+├── DEPLOYMENT.md              # Azure deployment guide
+└── README.md                  # This file
 ```
 
-## How It Works
+## ☁️ Azure Deployment
 
-The application uses the Agent Framework to:
+Deploy to Azure Container Apps in minutes. See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
 
-1. **Create an AI Agent** - Initializes an agent with custom instructions
-2. **Manage Conversation State** - Uses `AgentThread` to maintain context across multiple turns
-3. **Stream Responses** - Displays agent responses in real-time using `RunStreamingAsync`
-4. **Function Calling** - Demonstrates tool usage with a weather function
+### Quick Deploy
 
-### Key Components
-
-- **AgentThread**: Maintains conversation history between calls
-- **RunStreamingAsync**: Provides real-time response streaming
-- **AIFunctionFactory**: Enables the agent to call custom functions
-
-## Customization
-
-### Change the Agent's Personality
-
-Modify the `AgentInstructions` constant in `Program.cs`:
-
-```csharp
-const string AgentInstructions = "You are a helpful and friendly assistant named Georgie. You engage in natural conversations and can help with various tasks.";
+```bash
+# Build and deploy with Azure CLI
+az containerapp up \
+  --name georgie \
+  --resource-group rg-georgie \
+  --location eastus \
+  --source . \
+  --ingress external \
+  --target-port 8080
 ```
 
-### Add More Tools
+## 🔧 Configuration
 
-Add new functions with the `[Description]` attribute:
+### Azure AI Foundry (Recommended)
 
-```csharp
-[Description("Calculate the sum of two numbers.")]
-public static int Add(
-    [Description("The first number")] int a,
-    [Description("The second number")] int b
-)
+```json
 {
-    return a + b;
+  "AZURE_OPENAI_ENDPOINT": "https://your-resource.openai.azure.com/",
+  "AZURE_OPENAI_KEY": "your-key",
+  "AZURE_OPENAI_DEPLOYMENT": "gpt-4o-mini"
 }
 ```
 
-Then include them in the agent creation:
+### OpenAI API
+
+```json
+{
+  "OPENAI_API_KEY": "sk-your-key"
+}
+```
+
+### Azure AI Search (Optional RAG)
+
+Add knowledge base integration:
+
+```json
+{
+  "AZURE_SEARCH_ENDPOINT": "https://your-search.search.windows.net",
+  "AZURE_SEARCH_KEY": "your-key",
+  "AZURE_SEARCH_INDEX": "your-index-name"
+}
+```
+
+**Important**: Your index must have these fields:
+- `content_text` - Main document content
+- `document_title` - Document title
+- `content_path` - Source path/URL
+
+## 🎨 Customization
+
+### Change AI Model
+
+Edit `ChatAgent.Web/Services/AgentService.cs`:
 
 ```csharp
-tools: [
+private const string ModelDeployment = "gpt-4"; // Your model
+```
+
+### Add Custom Functions
+
+In `AgentService.cs`, add new function tools:
+
+```csharp
+[Description("Calculate the sum of two numbers")]
+public static int Add(
+    [Description("First number")] int a,
+    [Description("Second number")] int b)
+{
+    return a + b;
+}
+
+// Register in CreateAgent():
+Tools = [
     AIFunctionFactory.Create(GetWeather),
     AIFunctionFactory.Create(Add)
 ]
 ```
 
-### Change the Model
+### Modify UI Theme
 
-Update the `ModelId` in the options:
+Edit `ChatAgent.Web/wwwroot/app.css` to customize colors and styling. Current theme uses indigo/purple gradients (#6366f1, #8b5cf6).
 
-```csharp
-new OpenAIChatCompletionOptions
-{
-    ModelId = "gpt-4o"  // or gpt-3.5-turbo, gpt-4, etc.
-}
-```
+### Adjust Search Behavior
 
-## Important Notes
-
-⚠️ **The `--prerelease` flag is required** when installing Agent Framework packages as it's currently in preview.
-
-💡 **Conversation History**: The `AgentThread` object stores the conversation history locally and sends it with each request when using ChatCompletion services.
-
-🔒 **API Keys**: Never commit API keys to source control. Always use environment variables or secure configuration management.
-
-## Learn More
-
-- [Agent Framework Documentation](https://learn.microsoft.com/en-us/agent-framework/overview/agent-framework-overview)
-- [Multi-Turn Conversation Tutorial](https://learn.microsoft.com/en-us/agent-framework/tutorials/agents/multi-turn-conversation?pivots=programming-language-csharp)
-- [Agent Framework GitHub Repository](https://github.com/microsoft/agent-framework)
-
-## Troubleshooting
-
-### "OPENAI_API_KEY environment variable not set"
-
-Make sure you've set the environment variable in your current PowerShell session. The variable is session-specific, so you'll need to set it each time you open a new terminal.
-
-### Rate Limit Errors
-
-If you encounter rate limiting, consider:
-- Using a different model tier
-- Adding delays between requests
-- Upgrading your API plan
-
-### Package Restore Issues
-
-If you encounter issues restoring packages, ensure you're using the `--prerelease` flag:
-
-```powershell
-dotnet add package Microsoft.Agents.AI --prerelease
-dotnet add package Microsoft.Agents.AI.OpenAI --prerelease
-```
-
-## Adding Azure AI Search as a Knowledge Source
-
-### Overview
-
-You can enhance your agent with Retrieval Augmented Generation (RAG) by connecting it to Azure AI Search. This allows the agent to answer questions based on your own documents and data.
-
-### Prerequisites
-
-1. An Azure AI Search service
-2. A search index with your documents
-3. API credentials for the search service
-
-### Setup Steps
-
-#### 1. Install Azure Search Package
-
-```powershell
-dotnet add package Azure.Search.Documents
-```
-
-#### 2. Set Environment Variables
-
-```powershell
-$env:AZURE_SEARCH_ENDPOINT='https://your-search-service.search.windows.net'
-$env:AZURE_SEARCH_API_KEY='your-search-api-key'
-$env:AZURE_SEARCH_INDEX_NAME='your-index-name'
-```
-
-#### 3. Use the Example with Search
-
-The repository includes `ProgramWithSearch.cs` which demonstrates Azure AI Search integration. To use it:
-
-1. Modify `ChatAgent.csproj` to use `ProgramWithSearch.cs` as the entry point, or
-2. Copy the search implementation from `ProgramWithSearch.cs` into your `Program.cs`
-
-### Key Components
-
-#### TextSearchProvider
-
-The `TextSearchProvider` is the key component that enables RAG:
+In `AgentService.cs`, modify `TextSearchProviderOptions`:
 
 ```csharp
 var textSearchOptions = new TextSearchProviderOptions
 {
-    // Run search before every AI invocation
     SearchTime = TextSearchProviderOptions.TextSearchBehavior.BeforeAIInvoke,
-    
-    // Include recent messages in search context
     RecentMessageMemoryLimit = 5,
-    
-    // Custom prompts for context and citations
-    ContextPrompt = "Use the following information...",
-    CitationsPrompt = "Cite sources when available."
+    SearchResultLimit = 10,  // More results
+    ContextPrompt = "Your custom prompt here"
 };
 ```
 
-#### Search Adapter Function
+## 🧪 Local Development
 
-Create an adapter function that queries Azure AI Search:
+### Run with Hot Reload
 
-```csharp
-async Task<IEnumerable<TextSearchProvider.TextSearchResult>> SearchKnowledgeBase(
-    string query, 
-    CancellationToken ct)
-{
-    var searchOptions = new SearchOptions
-    {
-        Size = 5,
-        Select = { "content", "title", "url" }
-    };
-
-    SearchResults<SearchDocument> response = 
-        await searchClient.SearchAsync<SearchDocument>(query, searchOptions, ct);
-    
-    // Convert to TextSearchResult format
-    // ...
-}
+```powershell
+cd ChatAgent.Web
+dotnet watch run
 ```
 
-#### Creating the Agent with Search
+### Build Docker Image Locally
 
-```csharp
-AIAgent agent = new OpenAIClient(apiKey)
-    .GetChatClient("gpt-4o-mini")
-    .CreateAIAgent(new ChatClientAgentOptions
-    {
-        Name = AgentName,
-        ChatOptions = new ChatOptions { Instructions = AgentInstructions },
-        AIContextProviderFactory = ctx => new TextSearchProvider(
-            SearchKnowledgeBase,
-            ctx.SerializedState,
-            ctx.JsonSerializerOptions,
-            textSearchOptions
-        )
-    });
+```powershell
+docker build -t georgie:latest .
+docker run -p 8080:8080 `
+  -e AZURE_OPENAI_ENDPOINT="your-endpoint" `
+  -e AZURE_OPENAI_KEY="your-key" `
+  -e AZURE_OPENAI_DEPLOYMENT="your-deployment" `
+  georgie:latest
 ```
 
-### Index Schema Requirements
+### Debug in VS Code
 
-Your Azure AI Search index should have fields for:
-- **content**: The main text content to search
-- **title**: Document title or name
-- **url**: (Optional) Link to the source document
+Launch configurations are included for debugging the Blazor app.
 
-Adjust the field names in the code to match your index schema:
+## 📚 Documentation
 
-```csharp
-Select = { "content", "title", "url" }, // Your field names here
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete Azure Container Apps deployment guide
+- **[ChatAgent.Web/README.md](ChatAgent.Web/README.md)** - Detailed web application documentation
+- **[Microsoft Agent Framework](https://learn.microsoft.com/agent-framework/)** - Official framework docs
+
+## 🔐 Security Best Practices
+
+- ✅ Never commit `appsettings.Development.json` (already in `.gitignore`)
+- ✅ Use Azure Key Vault for production secrets
+- ✅ Rotate API keys regularly
+- ✅ Use managed identities in Azure environments
+- ✅ Enable HTTPS in production
+- ✅ Restrict CORS origins appropriately
+
+## 🛠️ Technology Stack
+
+- **.NET 9.0** - Latest framework
+- **Blazor Server** - Interactive server-side rendering
+- **Microsoft Agent Framework 1.0.0-preview** - AI agent capabilities
+- **Azure AI Foundry** - OpenAI model hosting
+- **Azure AI Search** - Knowledge base RAG
+- **SignalR** - Real-time WebSocket communication
+- **Docker** - Containerization
+
+## 📦 NuGet Packages
+
+```xml
+<PackageReference Include="Microsoft.Agents.AI" Version="1.0.0-preview.251204.1" />
+<PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-preview.251204.1" />
+<PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
+<PackageReference Include="Azure.Search.Documents" Version="11.7.0" />
 ```
 
-### Search Modes
+## 🤝 Contributing
 
-The TextSearchProvider supports two search behaviors:
+This is a demo project showcasing Microsoft Agent Framework capabilities. Feel free to:
+- Fork and modify for your use case
+- Report issues or suggest improvements
+- Share your implementations
 
-1. **BeforeAIInvoke** (Recommended): Automatically searches before each AI call
-2. **OnDemandFunctionCalling**: Exposes search as a tool the agent can call when needed
+## 📄 License
 
-### Advanced Features
+This project uses preview packages from Microsoft Agent Framework. Review license terms for each package.
 
-#### Vector Search
+## 🆘 Troubleshooting
 
-For semantic search using embeddings, configure your index with vector fields and use hybrid search:
+### "Cannot connect to endpoint"
+- Verify `AZURE_OPENAI_ENDPOINT` format includes `https://` and trailing `/`
+- Check Azure resource is deployed and accessible
 
-```csharp
-var searchOptions = new SearchOptions
-{
-    Size = 5,
-    QueryType = SearchQueryType.Semantic,
-    SemanticSearch = new SemanticSearchOptions
-    {
-        SemanticConfigurationName = "my-semantic-config"
-    }
-};
-```
+### "Search returning empty results"
+- Confirm index field names match: `content_text`, `document_title`, `content_path`
+- Check index has documents and is queryable
+- Verify search key has read permissions
 
-#### Custom Context Formatting
+### "Rate limit exceeded"
+- Reduce concurrent requests
+- Upgrade Azure OpenAI tier
+- Implement retry logic with backoff
 
-Customize how search results are formatted:
+### "Build fails in Docker"
+- Ensure .NET 9.0 SDK installed locally
+- Check Dockerfile targets correct .csproj path
+- Verify all NuGet packages restore successfully
 
-```csharp
-var textSearchOptions = new TextSearchProviderOptions
-{
-    ContextFormatter = results => 
-    {
-        // Custom formatting logic
-        return string.Join("\n\n", results.Select(r => 
-            $"Source: {r.SourceName}\n{r.Text}"));
-    }
-};
-```
+## 🎯 Use Cases
 
-#### Filtering Results
+GEORGIE is ideal for:
+- **Internal Knowledge Bases** - Employee documentation search
+- **Customer Support** - Product documentation RAG
+- **IT Helpdesk** - Technical documentation assistant
+- **Research Tools** - Academic paper search and summarization
+- **Training Materials** - Educational content Q&A
 
-Add filters to restrict search results:
+## 🚀 What's Next?
 
-```csharp
-var searchOptions = new SearchOptions
-{
-    Filter = "category eq 'documentation' and published eq true",
-    Size = 5
-};
-```
+Enhance GEORGIE with:
+- **Authentication** - Add Azure AD B2C for user login
+- **Conversation History** - Persist threads in Cosmos DB
+- **Multi-tenancy** - Isolate users and data
+- **Advanced Search** - Vector search with embeddings
+- **Analytics** - Track usage and satisfaction
+- **Voice Input** - Add speech-to-text capabilities
 
-### Example Queries
+---
 
-Once configured, your agent can answer questions based on your knowledge base:
-
-- "What is our return policy?"
-- "How do I configure the product?"
-- "Tell me about feature X from the documentation"
-
-The agent will automatically search your index and provide answers with source citations.
-
-### Troubleshooting
-
-**Issue**: "Search error: The remote name could not be resolved"
-- Check that `AZURE_SEARCH_ENDPOINT` is correctly formatted
-- Verify network connectivity to Azure
-
-**Issue**: "403 Forbidden"
-- Verify your `AZURE_SEARCH_API_KEY` is correct
-- Check that the API key has read permissions on the index
-
-**Issue**: "Index not found"
-- Confirm `AZURE_SEARCH_INDEX_NAME` matches an existing index
-- Verify the index is in the same search service
-
-**Issue**: Field not found errors
-- Update the field names in `Select` to match your index schema
-- Check the field names in the `result.Document.TryGetValue()` calls
-
-### Learn More
-
-- [Azure AI Search Documentation](https://learn.microsoft.com/en-us/azure/search/)
-- [Agent Framework RAG Samples](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/AgentWithRAG)
-- [TextSearchProvider API](https://learn.microsoft.com/en-us/dotnet/api/microsoft.agents.ai.textsearchprovider)
-
-## License
-
-This project is provided as an example implementation of the Microsoft Agent Framework.
+Built with ❤️ using Microsoft Agent Framework
