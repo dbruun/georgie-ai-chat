@@ -1,15 +1,31 @@
 # Azure Container Apps Deployment Guide
 
-This guide walks you through deploying the Chat Agent web application to Azure Container Apps (ACA).
+This guide walks you through deploying the GEORGIE chat application to Azure Container Apps (ACA).
 
 ## Prerequisites
 
 - Azure CLI installed (`az --version` to check)
 - Docker installed (for local testing)
 - Azure subscription
-- OpenAI API key
+- Azure AI Foundry endpoint and API key
+- (Optional) Azure AI Search service for RAG
 
-## Quick Deploy (5 minutes)
+## Understanding Secrets in Container Apps
+
+Container Apps use **secrets** to securely store sensitive values like API keys. 
+
+### How it works:
+1. **Define secrets** when creating the app: `--secrets azure-openai-key="your-key-value"`
+2. **Reference secrets** in environment variables: `AZURE_OPENAI_KEY=secretref:azure-openai-key`
+3. Secrets are encrypted at rest and only accessible to your app
+
+### Best practices:
+- ✅ Use secrets for API keys, connection strings, passwords
+- ✅ Use environment variables for non-sensitive config (endpoints, deployment names)
+- ✅ Rotate secrets regularly using `az containerapp secret set`
+- ❌ Never commit secrets to source control
+
+## Quick Deploy (First Time - 10 minutes)
 
 ```bash
 # 1. Login to Azure
@@ -53,9 +69,15 @@ az containerapp create \
   --registry-username $ACR_USERNAME \
   --registry-password $ACR_PASSWORD \
   --secrets \
-    openai-key="your-openai-api-key-here" \
+    azure-openai-key="your-azure-openai-api-key" \
+    azure-search-key="your-azure-search-admin-key" \
   --env-vars \
-    OPENAI_API_KEY=secretref:openai-key \
+    AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/" \
+    AZURE_OPENAI_KEY=secretref:azure-openai-key \
+    AZURE_OPENAI_DEPLOYMENT="gpt-4o-mini" \
+    AZURE_SEARCH_ENDPOINT="https://your-search.search.windows.net" \
+    AZURE_SEARCH_KEY=secretref:azure-search-key \
+    AZURE_SEARCH_INDEX="your-index-name" \
   --cpu 0.5 --memory 1Gi \
   --min-replicas 1 --max-replicas 3
 
@@ -66,10 +88,11 @@ az containerapp show \
   --query properties.configuration.ingress.fqdn -o tsv
 ```
 
-## With Azure AI Search (RAG)
+## Full Deployment with Azure AI Foundry + Azure AI Search
 
-Add these to step 8:
+Deploy GEORGIE with all features enabled:
 
+### Bash (Linux/Mac):
 ```bash
 az containerapp create \
   --name $APP_NAME \
@@ -82,16 +105,49 @@ az containerapp create \
   --registry-username $ACR_USERNAME \
   --registry-password $ACR_PASSWORD \
   --secrets \
-    openai-key="your-openai-api-key" \
-    search-key="your-search-admin-key" \
+    azure-openai-key="your-azure-openai-api-key" \
+    azure-search-key="your-azure-search-admin-key" \
   --env-vars \
-    OPENAI_API_KEY=secretref:openai-key \
+    AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/" \
+    AZURE_OPENAI_KEY=secretref:azure-openai-key \
+    AZURE_OPENAI_DEPLOYMENT="gpt-4o-mini" \
     AZURE_SEARCH_ENDPOINT="https://your-search.search.windows.net" \
-    AZURE_SEARCH_KEY=secretref:search-key \
+    AZURE_SEARCH_KEY=secretref:azure-search-key \
     AZURE_SEARCH_INDEX="your-index-name" \
   --cpu 0.5 --memory 1Gi \
   --min-replicas 1 --max-replicas 3
 ```
+
+### PowerShell (Windows):
+```powershell
+az containerapp create `
+  --name $APP_NAME `
+  --resource-group $RESOURCE_GROUP `
+  --environment $ENV_NAME `
+  --image "$ACR_NAME.azurecr.io/chatagent-web:latest" `
+  --target-port 8080 `
+  --ingress external `
+  --registry-server "$ACR_NAME.azurecr.io" `
+  --registry-username $ACR_USERNAME `
+  --registry-password $ACR_PASSWORD `
+  --secrets `
+    azure-openai-key="your-azure-openai-api-key" `
+    azure-search-key="your-azure-search-admin-key" `
+  --env-vars `
+    AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/" `
+    AZURE_OPENAI_KEY=secretref:azure-openai-key `
+    AZURE_OPENAI_DEPLOYMENT="gpt-4o-mini" `
+    AZURE_SEARCH_ENDPOINT="https://your-search.search.windows.net" `
+    AZURE_SEARCH_KEY=secretref:azure-search-key `
+    AZURE_SEARCH_INDEX="your-index-name" `
+  --cpu 0.5 --memory 1Gi `
+  --min-replicas 1 --max-replicas 3
+```
+
+**Note:** Your Azure AI Search index must have these fields:
+- `content_text` - Main document content
+- `document_title` - Document title  
+- `content_path` - Source path/URL
 
 ## Update Deployment
 
