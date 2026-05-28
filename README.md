@@ -44,11 +44,6 @@ A modern AI chat web application built with Blazor Server and Microsoft Agent Fr
 
 ## 📁 Project Structure
 
-To use Azure OpenAI instead, modify the `Program.cs` file to use `AzureOpenAIClient`:
-
-```csharp
-
-
 ```
 georgie-ai-chat/
 ├── ChatAgent.Web/              # Blazor web application
@@ -66,6 +61,52 @@ georgie-ai-chat/
 ├── DEPLOYMENT.md              # Azure deployment guide
 └── README.md                  # This file
 ```
+
+## 📐 Architecture
+
+### Solution Diagram
+
+```mermaid
+flowchart TD
+    Browser["👤 User Browser"]
+
+    subgraph ACA["Azure Container Apps"]
+        subgraph BlazorApp["Blazor Server App (.NET 9)"]
+            UI["🖥️ Home.razor\n(Chat UI + SignalR)"]
+            AgentSvc["⚙️ AgentService\n(Agent Management)"]
+            MAF["📦 Microsoft Agent Framework\n(AIAgent + AgentThread)"]
+
+            UI -->|"User message"| AgentSvc
+            AgentSvc -->|"RunStreamingAsync"| MAF
+            MAF -->|"Streaming tokens"| AgentSvc
+            AgentSvc -->|"Streamed response"| UI
+        end
+    end
+
+    subgraph AzureServices["Azure Cloud Services"]
+        AzureOpenAI["☁️ Azure AI Foundry\n(Azure OpenAI)"]
+        AzureSearch["🔍 Azure AI Search\n(Knowledge Base / RAG)"]
+    end
+
+    OpenAI["🤖 OpenAI API\n(Alternative)"]
+
+    Browser <-->|"HTTP / WebSocket"| UI
+    MAF -->|"Search query\n(before AI invoke)"| AzureSearch
+    AzureSearch -->|"Relevant documents"| MAF
+    MAF -->|"Chat completion\n(streaming)"| AzureOpenAI
+    MAF -.->|"OR if Azure not configured"| OpenAI
+    AzureOpenAI -->|"Streamed response"| MAF
+```
+
+### UI Screenshot
+
+![GEORGIE Chat UI](https://github.com/user-attachments/assets/3eca6198-95dd-40e7-95ca-74c7f11408c8)
+
+The chat interface features:
+- **Purple/indigo gradient** header with connection status
+- **Bubble-style messages**: user messages on the right (purple), assistant on the left (grey)
+- **Streaming responses** displayed in real-time as the AI generates text
+- **Textarea input** with Enter-to-send support and a Send button
 
 ## ☁️ Azure Deployment
 
