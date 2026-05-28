@@ -1,6 +1,8 @@
 @page "/"
 @rendermode InteractiveServer
 @inject AgentService AgentService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IConfiguration Configuration
 @using Microsoft.Agents.AI
 
 <PageTitle>GEORGIE - AI Chat Assistant</PageTitle>
@@ -9,6 +11,12 @@
     <div class="chat-header">
         <h1>🤖 GEORGIE</h1>
         <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Your AI Assistant</p>
+        @if (isAuthConfigured)
+        {
+            <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">
+                @(isAuthenticated ? $"Signed in as {userDisplayName}" : "Sign in to enable Microsoft 365 knowledge access.")
+            </p>
+        }
         @if (!string.IsNullOrEmpty(statusMessage))
         {
             <div class="status-message @statusClass">@statusMessage</div>
@@ -78,6 +86,9 @@
     private bool isStreaming = false;
     private string statusMessage = "";
     private string statusClass = "";
+    private bool isAuthConfigured;
+    private bool isAuthenticated;
+    private string userDisplayName = "";
     
     private AIAgent? agent;
     private AgentThread? thread;
@@ -86,14 +97,29 @@
     {
         try
         {
-            agent = AgentService.CreateAgent();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            isAuthConfigured = !string.IsNullOrWhiteSpace(Configuration["AzureAd:ClientId"]);
+            isAuthenticated = user.Identity?.IsAuthenticated == true;
+            userDisplayName = user.Identity?.Name ?? user.FindFirst("name")?.Value ?? "Microsoft 365 user";
+
+            agent = await AgentService.CreateAgentAsync(user);
             thread = agent.GetNewThread();
             
-            var hasSearch = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AZURE_SEARCH_ENDPOINT"));
-            statusMessage = hasSearch 
-                ? "✓ Connected with Azure AI Search knowledge base" 
-                : "✓ Connected (no knowledge base configured)";
-            statusClass = "success";
+            var hasSearch = !string.IsNullOrWhiteSpace(Configuration["AZURE_SEARCH_ENDPOINT"])
+                || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AZURE_SEARCH_ENDPOINT"));
+            var hasSharePoint = string.Equals(Configuration["SharePointKnowledge:Enabled"], "true", StringComparison.OrdinalIgnoreCase);
+
+            statusMessage = hasSharePoint switch
+            {
+                true when isAuthenticated => "✓ Connected with SharePoint knowledge using your Microsoft 365 permissions",
+                true when isAuthConfigured => "⚠ SharePoint knowledge is configured. Sign in to use your Microsoft 365 permissions.",
+                _ when hasSearch => "✓ Connected with Azure AI Search knowledge base",
+                _ => "✓ Connected (no knowledge base configured)"
+            };
+
+            statusClass = hasSharePoint && !isAuthenticated ? "error" : "success";
         }
         catch (Exception ex)
         {

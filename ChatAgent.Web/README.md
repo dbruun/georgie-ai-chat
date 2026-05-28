@@ -7,6 +7,7 @@ A modern AI chat interface built with Blazor Server and Microsoft Agent Framewor
 - 🤖 Meet GEORGIE - Your conversational AI assistant
 - 💬 Real-time streaming chat interface
 - 🔍 Azure AI Search integration for RAG (Retrieval Augmented Generation)
+- 📚 SharePoint Online knowledge access using the signed-in user's Microsoft 365 permissions
 - ☁️ Works with OpenAI or Azure AI Foundry endpoints
 - 🎨 Beautiful, responsive UI with modern gradient design
 - 🚀 Optimized for Azure Container Apps deployment
@@ -152,6 +153,8 @@ docker run -p 8080:8080 `
 
 ## Configuration
 
+For the full SharePoint and Microsoft 365 setup flow, see [docs/sharepoint-knowledge-setup.md](docs/sharepoint-knowledge-setup.md).
+
 ### Environment Variables
 
 | Variable | Required | Description |
@@ -160,6 +163,38 @@ docker run -p 8080:8080 `
 | `AZURE_SEARCH_ENDPOINT` | No | Azure AI Search endpoint URL |
 | `AZURE_SEARCH_KEY` | No | Azure AI Search admin key |
 | `AZURE_SEARCH_INDEX` | No | Name of your search index |
+
+### SharePoint Knowledge Configuration
+
+Add this to `appsettings.json` or user secrets:
+
+```json
+{
+   "AzureAd": {
+      "Instance": "https://login.microsoftonline.com/",
+      "TenantId": "your-tenant-id",
+      "ClientId": "your-app-client-id",
+      "ClientSecret": "your-app-client-secret",
+      "CallbackPath": "/signin-oidc"
+   },
+   "SharePointKnowledge": {
+      "Enabled": true,
+      "Path": "https://contoso.sharepoint.com/sites/Georgie",
+      "ResultCount": 5,
+      "GraphScopes": [
+         "User.Read",
+         "Files.Read.All",
+         "Sites.Read.All"
+      ]
+   }
+}
+```
+
+GEORGIE queries Microsoft Graph search with the signed-in user's delegated token, so SharePoint results are security-trimmed to content that user can already access.
+
+If the customer uses Okta for workforce sign-in, true SharePoint pass-through still requires Microsoft 365 tokens issued by Microsoft Entra ID. The practical pattern is to federate Entra to Okta so users still authenticate with Okta, while this app signs in against Entra and can obtain delegated Microsoft Graph tokens for SharePoint.
+
+For a more complete explanation of the auth model, delegated Graph permissions, and Azure-side configuration, see [docs/sharepoint-knowledge-setup.md](docs/sharepoint-knowledge-setup.md).
 
 ### Azure AI Search Schema
 

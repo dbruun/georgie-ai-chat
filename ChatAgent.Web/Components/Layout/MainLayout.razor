@@ -1,7 +1,22 @@
 @inherits LayoutComponentBase
+@inject IConfiguration Configuration
 
 <div class="page">
     <main>
+        @if (!string.IsNullOrWhiteSpace(Configuration["AzureAd:ClientId"]))
+        {
+            <div style="display: flex; justify-content: flex-end; padding: 16px 24px 0;">
+                <AuthorizeView>
+                    <Authorized>
+                        <a href="/account/logout">Sign out</a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/account/login">Sign in</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        }
+
         @Body
     </main>
 </div>
